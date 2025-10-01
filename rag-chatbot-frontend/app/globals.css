@@ -5,7 +5,9 @@
   --foreground: #171717;
 }
 
-@theme inline {
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -23,4 +25,375 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* KaTeX styles for dark theme with enhanced visual appeal */
+.katex {
+  color: #60a5fa !important; /* blue-400 for better contrast */
+}
+
+.katex .base {
+  color: #60a5fa !important;
+}
+
+.katex .mathml {
+  color: #60a5fa !important;
+}
+
+/* Enhanced math formulas with better visual appeal */
+.katex-display {
+  margin: 1.5em auto !important; /* Center the entire container */
+  padding: 1.25em 1.5em !important; /* More generous padding */
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.15)) !important; /* Blue gradient background */
+  border-radius: 0.75rem !important; /* More rounded corners */
+  border: 1px solid rgba(59, 130, 246, 0.3) !important; /* Blue border */
+  text-align: center !important; /* Center the equations */
+  display: block !important;
+  overflow-x: auto !important;
+  max-width: 80% !important; /* Limit width and center in chat */
+  width: fit-content !important; /* Only take necessary width */
+  box-sizing: border-box !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important; /* Subtle shadow */
+  position: relative !important; /* Ensure proper positioning */
+  left: 50% !important; /* Move to center */
+  transform: translateX(-50%) !important; /* Center perfectly */
+  
+  /* Custom scrollbar styling - hidden by default */
+  scrollbar-width: thin !important;
+  scrollbar-color: transparent transparent !important;
+}
+
+/* Show scrollbar on hover for katex-display */
+.katex-display:hover {
+  scrollbar-color: rgba(59, 130, 246, 0.5) rgba(31, 41, 55, 0.3) !important; /* blue thumb, gray track */
+}
+
+/* Webkit scrollbar styling for katex-display */
+.katex-display::-webkit-scrollbar {
+  height: 8px !important;
+}
+
+.katex-display::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-radius: 4px !important;
+}
+
+.katex-display::-webkit-scrollbar-thumb {
+  background: transparent !important;
+  border-radius: 4px !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.katex-display:hover::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.3) !important;
+}
+
+.katex-display:hover::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.5) !important;
+}
+
+.katex-display:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.7) !important;
+}
+
+/* Inline math styling */
+.katex:not(.katex-display) {
+  background-color: rgba(31, 41, 55, 0.7) !important; /* bg-gray-800/70 */
+  padding: 0.125rem 0.375rem !important; /* Slightly more padding */
+  border-radius: 0.25rem !important;
+  border: 1px solid rgba(75, 85, 99, 0.3) !important;
+}
+
+/* Better spacing for equations in markdown content */
+.markdown-content .katex-display + p,
+.markdown-content p + .katex-display {
+  margin-top: 1rem !important;
+}
+
+/* Prevent markdown content from causing horizontal overflow */
+.markdown-content {
+  max-width: 100% !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+  hyphens: auto !important;
+  line-break: auto !important;
+}
+
+/* Better text wrapping for specific elements */
+.markdown-content p,
+.markdown-content li,
+.markdown-content div {
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+  word-break: break-word !important;
+  white-space: pre-wrap !important;
+  hyphens: auto !important;
+}
+
+/* Minimal list styling */
+.markdown-content ul {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25rem !important;
+  line-height: 1.4 !important;
+}
+
+/* Minimal spacing for nested content in lists */
+.markdown-content li p {
+  margin-bottom: 0.25rem !important;
+}
+
+.markdown-content li p:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Minimal spacing for list items with multiple paragraphs */
+.markdown-content li > * + * {
+  margin-top: 0.25rem !important;
+}
+
+/* Better spacing around formulas in lists */
+.markdown-content li .katex-display {
+  margin: 1.25em 0 !important;
+}
+
+/* Ensure proper spacing between different content types */
+.markdown-content p + ul,
+.markdown-content ul + p,
+.markdown-content h2 + ul,
+.markdown-content h3 + ul {
+  margin-top: 0.25rem !important;
+}
+
+/* Formula introduction text styling */
+.markdown-content p + .katex-display {
+  margin-top: 0.75rem !important;
+}
+
+.markdown-content .katex-display + p {
+  margin-top: 0.75rem !important;
+}
+
+/* Enhanced formula container */
+.markdown-content .katex-display {
+  position: relative;
+}
+
+.markdown-content .katex-display::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  right: -1px;
+  bottom: -1px;
+  background: linear-gradient(45deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.1));
+  border-radius: 0.75rem;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.markdown-content .katex-display:hover::before {
+  opacity: 1;
+}
+
+/* Handle numbers and currency properly */
+.markdown-content {
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* Ensure proper spacing around numbers and punctuation */
+.markdown-content p::after,
+.markdown-content li::after {
+  content: "";
+  white-space: normal;
+}
+
+/* Handle long URLs and code blocks */
+.markdown-content pre,
+.markdown-content code {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  word-break: break-all !important;
+  
+  /* Custom scrollbar styling - hidden by default */
+  scrollbar-width: thin !important;
+  scrollbar-color: transparent transparent !important;
+}
+
+/* Show scrollbar on hover for code blocks */
+.markdown-content pre:hover,
+.markdown-content code:hover {
+  scrollbar-color: rgba(59, 130, 246, 0.5) rgba(31, 41, 55, 0.3) !important;
+}
+
+/* Webkit scrollbar styling for code blocks */
+.markdown-content pre::-webkit-scrollbar,
+.markdown-content code::-webkit-scrollbar {
+  height: 8px !important;
+  width: 8px !important;
+}
+
+.markdown-content pre::-webkit-scrollbar-track,
+.markdown-content code::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-radius: 4px !important;
+}
+
+.markdown-content pre::-webkit-scrollbar-thumb,
+.markdown-content code::-webkit-scrollbar-thumb {
+  background: transparent !important;
+  border-radius: 4px !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.markdown-content pre:hover::-webkit-scrollbar-track,
+.markdown-content code:hover::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.3) !important;
+}
+
+.markdown-content pre:hover::-webkit-scrollbar-thumb,
+.markdown-content code:hover::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.5) !important;
+}
+
+.markdown-content pre:hover::-webkit-scrollbar-thumb:hover,
+.markdown-content code:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.7) !important;
+}
+
+/* Ensure tables are responsive */
+.markdown-content table {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  display: block !important;
+  white-space: nowrap !important;
+}
+
+/* Enhanced colors for formulas in display mode */
+.katex-display .katex {
+  color: #3b82f6 !important; /* Brighter blue */
+  font-size: 1.1em !important; /* Slightly larger for better readability */
+  display: block !important; /* Ensure block display for centering */
+  margin: 0 auto !important; /* Center the content */
+  width: fit-content !important; /* Only take up necessary width */
+  text-align: center !important; /* Center text within the element */
+}
+
+/* Special styling for operators and numbers */
+.katex-display .mord {
+  color: #1e40af !important; /* Darker blue for variables */
+}
+
+.katex-display .mbin, .katex-display .mrel {
+  color: #60a5fa !important; /* Light blue for operators */
+}
+
+/* Enhanced inline math styling */
+.katex:not(.katex-display) {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  display: inline-block !important;
+  color: #60a5fa !important; /* Blue for inline math */
+  background-color: rgba(59, 130, 246, 0.1) !important; /* Light blue background */
+  padding: 0.2rem 0.4rem !important;
+  border-radius: 0.375rem !important; /* rounded-md */
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+  
+  /* Custom scrollbar styling for inline katex - hidden by default */
+  scrollbar-width: thin !important;
+  scrollbar-color: transparent transparent !important;
+}
+
+/* Show scrollbar on hover for inline katex */
+.katex:not(.katex-display):hover {
+  scrollbar-color: rgba(59, 130, 246, 0.5) rgba(31, 41, 55, 0.3) !important;
+}
+
+/* Webkit scrollbar styling for inline katex */
+.katex:not(.katex-display)::-webkit-scrollbar {
+  height: 6px !important;
+}
+
+.katex:not(.katex-display)::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.katex:not(.katex-display)::-webkit-scrollbar-thumb {
+  background: transparent !important;
+  border-radius: 3px !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.katex:not(.katex-display):hover::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.3) !important;
+}
+
+.katex:not(.katex-display):hover::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.5) !important;
+}
+
+/* Streaming cursor animation */
+.streaming-cursor::after {
+  content: '|';
+  color: #3b82f6; /* blue-500 */
+  animation: blink 1s infinite;
+  font-weight: bold;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Add fade-in animation for messages */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Smooth transitions for better UX */
+* {
+  transition: max-width 0.2s ease, width 0.2s ease;
+}
+
+/* Custom utility classes for better text wrapping */
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  hyphens: auto !important;
+}
+
+/* Fix for concatenated text issues */
+.markdown-content * {
+  word-spacing: normal !important;
+  letter-spacing: normal !important;
+}
+
+/* Ensure proper spacing between inline elements */
+.markdown-content span,
+.markdown-content em,
+.markdown-content strong {
+  word-spacing: inherit !important;
+}
+
+/* Better handling of numbers and currency */
+.markdown-content {
+  text-rendering: optimizeSpeed !important;
+  font-feature-settings: "kern" 1, "liga" 1 !important;
 }

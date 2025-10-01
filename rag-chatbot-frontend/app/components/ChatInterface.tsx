@@ -4,6 +4,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { 
   apiClient, 
   ChatMessage, 
@@ -16,18 +18,29 @@ const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom of messages
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Auto-scroll to bottom of messages with improved behavior
+  const scrollToBottom = useCallback((behavior: 'smooth' | 'auto' = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   }, []);
 
+  // Different scroll behavior for streaming vs new messages
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    if (isStreaming) {
+      // During streaming, scroll smoothly but less frequently
+      const timeoutId = setTimeout(() => {
+        scrollToBottom('auto'); // Use auto scroll during streaming to reduce jumping
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    } else {
+      // For new messages, scroll smoothly
+      scrollToBottom('smooth');
+    }
+  }, [messages.length, scrollToBottom]); // Only trigger on message count change
 
   // Test connection to backend
   const testConnection = useCallback(async () => {
@@ -55,24 +68,70 @@ const ChatInterface: React.FC = () => {
     const currentInput = inputValue;
     setInputValue('');
     setIsLoading(true);
+    setIsStreaming(false);
+
+    // Create a temporary bot message that will be updated with streaming content
+    const tempBotMessageId = Date.now() + 1;
+    const tempBotMessage = createBotMessage('');
+    tempBotMessage.id = tempBotMessageId;
+    
+    setMessages(prev => [...prev, tempBotMessage]);
 
     try {
-      const response = await apiClient.sendMessage({
+      let streamingContent = '';
+      let hasStartedStreaming = false;
+
+      for await (const chunk of apiClient.sendMessageStream({
         message: currentInput,
         conversation_id: 'test-session-1'
-      });
-      
-      const botMessage = createBotMessage(
-        response.response,
-        response.sources || []
-      );
-
-      setMessages(prev => [...prev, botMessage]);
+      })) {
+        if (chunk.error) {
+          throw new Error(chunk.error);
+        }
+        
+        if (chunk.content) {
+          // First content chunk - switch from loading to streaming
+          if (!hasStartedStreaming) {
+            setIsLoading(false);
+            setIsStreaming(true);
+            hasStartedStreaming = true;
+          }
+          
+          streamingContent += chunk.content;
+          
+          // Update the temporary message with streaming content
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === tempBotMessageId 
+                ? { ...msg, content: streamingContent }
+                : msg
+            )
+          );
+        }
+        
+        if (chunk.done) {
+          // Final update
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === tempBotMessageId 
+                ? { ...msg, content: streamingContent }
+                : msg
+            )
+          );
+          break;
+        }
+      }
     } catch (error) {
+      // Replace the temporary message with an error message
       const errorMessage = createErrorMessage(error as Error);
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === tempBotMessageId ? errorMessage : msg
+        )
+      );
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
     }
   }, [inputValue, isLoading]);
 
@@ -136,7 +195,7 @@ const ChatInterface: React.FC = () => {
       {/* Messages Container */}
       <main className="flex-1 overflow-hidden">
         <div className="max-w-4xl mx-auto h-full flex flex-col">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4">
             {messages.length === 0 ? (
               <div className="text-center py-12">
                 <div className="p-4 bg-gray-800 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
@@ -150,10 +209,10 @@ const ChatInterface: React.FC = () => {
                 </p>
               </div>
             ) : (
-              messages.map((message) => (
+              messages.map((message, index) => (
                 <div
                   key={message.id}
-                  className={`flex items-start gap-3 animate-fade-in ${
+                  className={`flex items-start gap-3 animate-fade-in w-full ${
                     message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'
                   }`}
                 >
@@ -172,10 +231,10 @@ const ChatInterface: React.FC = () => {
                       }`} />
                     )}
                   </div>
-                  <div className={`flex-1 max-w-3xl ${
+                  <div className={`flex-1 min-w-0 max-w-full ${
                     message.sender === 'user' ? 'text-right' : 'text-left'
                   }`}>
-                    <div className={`inline-block p-3 rounded-lg transition-colors ${
+                    <div className={`inline-block p-3 rounded-lg transition-colors max-w-full break-words ${
                       message.sender === 'user'
                         ? 'bg-blue-600 text-white'
                         : message.isError
@@ -187,76 +246,61 @@ const ChatInterface: React.FC = () => {
                           {message.content}
                         </p>
                       ) : (
-                        <div className="markdown-content">
+                                                <div className={`markdown-content overflow-hidden ${
+                          isStreaming && index === messages.length - 1 ? 'streaming-cursor' : ''
+                        }`}>
                           <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
+                            remarkPlugins={[remarkGfm, remarkMath]}
+                            rehypePlugins={[rehypeKatex]}
                             components={{
                               // Style markdown elements to match our theme
-                              p: ({children}) => <p className="mb-3 last:mb-0 leading-relaxed text-gray-100">{children}</p>,
-                              strong: ({children}) => <strong className="font-bold text-white">{children}</strong>,
-                              em: ({children}) => <em className="italic text-blue-300">{children}</em>,
-                              ul: ({children}) => <ul className="list-none mb-3 space-y-2">{children}</ul>,
+                              p: ({children}) => {
+                                // Check if this paragraph is empty or just whitespace
+                                const content = children?.toString().trim();
+                                if (!content || content === '' || content === '\n') {
+                                  return null; // Don't render empty paragraphs
+                                }
+                                return <p className="mb-1 last:mb-0 leading-normal text-gray-100 break-words overflow-wrap-anywhere">{children}</p>;
+                              },
+                              strong: ({children}) => <strong className="font-bold text-white break-words">{children}</strong>,
+                              em: ({children}) => <em className="italic text-blue-300 break-words">{children}</em>,
+                              ul: ({children}) => <ul className="list-none mb-3 space-y-2 pl-0">{children}</ul>,
                               ol: ({children}) => <ol className="list-decimal list-inside mb-3 space-y-2 pl-2">{children}</ol>,
                               li: ({children}) => (
-                                <li className="text-gray-100 flex items-start">
-                                  <span className="text-blue-400 mr-2 flex-shrink-0">•</span>
-                                  <span>{children}</span>
+                                <li className="text-gray-100 flex flex-row items-start gap-3 break-words overflow-wrap-anywhere">
+                                  <div className="text-blue-400 flex-shrink-0 mt-1 text-sm">•</div>
+                                  <div className="break-words inline-flex overflow-wrap-anywhere min-w-0 flex-1 leading-normal">
+                                    {children}
+                                  </div>
                                 </li>
                               ),
                               blockquote: ({children}) => (
-                                <blockquote className="border-l-4 border-blue-500 pl-4 italic text-blue-300 my-3 bg-gray-900/50 py-2 rounded-r">
+                                <blockquote className="border-l-4 border-blue-500 pl-4 italic text-blue-300 my-3 bg-gray-900/50 py-2 rounded-r break-words overflow-wrap-anywhere">
                                   {children}
                                 </blockquote>
                               ),
                               code: ({children}) => (
-                                <code className="bg-gray-900 text-blue-300 px-2 py-1 rounded text-sm font-mono">
+                                <code className="bg-gray-900 text-blue-300 px-2 py-1 rounded text-sm font-mono break-all">
                                   {children}
                                 </code>
                               ),
-                              h1: ({children}) => <h1 className="text-xl font-bold text-white mb-3 border-b border-gray-600 pb-2">{children}</h1>,
-                              h2: ({children}) => <h2 className="text-lg font-bold text-white mb-3">{children}</h2>,
-                              h3: ({children}) => <h3 className="text-base font-bold text-blue-300 mb-2">{children}</h3>,
+                              h1: ({children}) => <h1 className="text-xl font-bold text-blue-300 mb-2 mt-3 border-b border-gray-600 pb-1 break-words">{children}</h1>,
+                              h2: ({children}) => <h2 className="text-lg font-bold text-blue-300 mb-1 mt-2 break-words">{children}</h2>,
+                              h3: ({children}) => <h3 className="text-base font-bold text-blue-400 mb-1 mt-1 break-words">{children}</h3>,
+                              a: ({children, href}) => (
+                                <a 
+                                  href={href} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-300 hover:text-blue-200 underline underline-offset-2 decoration-dotted transition-colors break-all"
+                                >
+                                  {children}
+                                </a>
+                              ),
                             }}
                           >
                             {message.content}
                           </ReactMarkdown>
-                        </div>
-                      )}
-                      {message.sources && message.sources.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-gray-600">
-                          <p className="text-xs text-gray-400 mb-1 font-medium">
-                            Sources:
-                          </p>
-                          <div className="flex flex-wrap gap-1">
-                            {message.sources.map((source, idx) => {
-                              const isUrl = source.startsWith('http://') || source.startsWith('https://');
-                              
-                              if (isUrl) {
-                                return (
-                                  <a
-                                    key={idx}
-                                    href={source}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-xs bg-gray-700 text-blue-300 px-2 py-1 rounded transition-colors hover:bg-blue-600 hover:text-white underline underline-offset-2 decoration-dotted decoration-1"
-                                    title={`Open source: ${source}`}
-                                  >
-                                    {source.length > 50 ? `${source.substring(0, 47)}...` : source}
-                                  </a>
-                                );
-                              } else {
-                                return (
-                                  <span
-                                    key={idx}
-                                    className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded transition-colors hover:bg-gray-600"
-                                    title={source}
-                                  >
-                                    {source.length > 50 ? `${source.substring(0, 47)}...` : source}
-                                  </span>
-                                );
-                              }
-                            })}
-                          </div>
                         </div>
                       )}
                     </div>
@@ -270,15 +314,36 @@ const ChatInterface: React.FC = () => {
             
             {/* Loading indicator */}
             {isLoading && (
-              <div className="flex items-start gap-3 animate-fade-in">
+              <div className="flex items-start gap-3 animate-fade-in w-full">
                 <div className="flex-shrink-0 p-2 bg-gray-700 rounded-lg">
                   <Bot className="w-5 h-5 text-gray-300" />
                 </div>
-                <div className="flex-1">
-                  <div className="inline-block p-3 bg-gray-800 border border-gray-700 rounded-lg">
+                <div className="flex-1 min-w-0">
+                  <div className="inline-block p-3 bg-gray-800 border border-gray-700 rounded-lg max-w-full">
                     <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-400 flex-shrink-0" />
                       <span className="text-gray-300">Searching knowledge base...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Streaming indicator */}
+            {isStreaming && (
+              <div className="flex items-start gap-3 animate-fade-in w-full">
+                <div className="flex-shrink-0 p-2 bg-gray-700 rounded-lg">
+                  <Bot className="w-5 h-5 text-gray-300" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="inline-block p-3 bg-gray-800 border border-gray-700 rounded-lg max-w-full">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1 flex-shrink-0">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></div>
+                      </div>
+                      <span className="text-gray-300">AI is responding...</span>
                     </div>
                   </div>
                 </div>
@@ -310,11 +375,15 @@ const ChatInterface: React.FC = () => {
             </div>
             <button
               onClick={sendMessage}
-              disabled={!inputValue.trim() || isLoading}
+              disabled={!inputValue.trim() || isLoading || isStreaming}
               className="px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200 flex items-center gap-2 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
               aria-label="Send message"
             >
-              <Send className="w-4 h-4" />
+              {isLoading || isStreaming ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </button>
           </div>
           <div className="text-xs text-gray-500 mt-2 text-center">
