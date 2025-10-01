@@ -1,48 +1,47 @@
 version: '3.8'
 
 services:
-  # Backend API Service
+  # --- Backend API (NestJS) ---
   api:
     build:
       context: ./rag-chatbot-api
       dockerfile: Dockerfile
     ports:
-      - "3005:3005"
+      - "3005:3005"                  # host:container
     environment:
       - NODE_ENV=production
       - PORT=3005
-    # Load environment variables from the .env file in the API directory
+    # Load env from repo root (adjust if your .env lives elsewhere)
     env_file:
       - ./.env
-    networks:
-      - app-network
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3005/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
+    restart: unless-stopped
+    networks:
+      - app-network
 
-  # Frontend Service
+  # --- Frontend (Next.js) ---
   frontend:
     build:
       context: ./rag-chatbot-frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:3005
+        # The frontend will call the API directly
+        NEXT_PUBLIC_API_URL: "/api"
     ports:
-      - "3000:3000"
+      - "3010:3000"                  # host:container (Frontend available at http://62.169.27.195:3010)
     environment:
       - NODE_ENV=production
     depends_on:
       api:
         condition: service_healthy
+    restart: unless-stopped
     networks:
       - app-network
 
 networks:
   app-network:
     driver: bridge
-
-# Optional: Add volumes for data persistence if needed
-# volumes:
-#   api_data:

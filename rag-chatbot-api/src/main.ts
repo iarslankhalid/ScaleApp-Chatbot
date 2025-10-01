@@ -6,11 +6,23 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.enableCors({
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://frontend:3000'],
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  });
+app.enableCors({
+  origin: [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://frontend:3000',
+
+    // add your deployed frontends:
+    'http://62.169.27.195:3010',
+    'http://scaleapp.linkedinwriter.io',
+    'https://scaleapp.linkedinwriter.io',
+  ],
+  methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+  credentials: true,
+  maxAge: 86400, // cache preflight for a day (optional)
+});
+
 
   app.useGlobalPipes(
     new ValidationPipe({
