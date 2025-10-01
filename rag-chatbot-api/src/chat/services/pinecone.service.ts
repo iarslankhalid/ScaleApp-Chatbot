@@ -39,6 +39,7 @@ export class PineconeService {
 
       const contexts: string[] = [];
       const sources: string[] = [];
+      const uniqueSources = new Set<string>();
 
       if (searchResponse.matches) {
         this.logger.log(`Found ${searchResponse.matches.length} matches from Pinecone`);
@@ -52,7 +53,12 @@ export class PineconeService {
             this.logger.log(`Retrieved document - Score: ${score.toFixed(4)}, Source: ${source}, Text preview: ${text.substring(0, 100)}...`);
             
             contexts.push(text);
-            sources.push(source);
+            
+            // Only add source if we haven't seen it before
+            if (!uniqueSources.has(source)) {
+              uniqueSources.add(source);
+              sources.push(source);
+            }
           }
         }
         
